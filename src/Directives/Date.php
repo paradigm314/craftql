@@ -2,10 +2,10 @@
 
 namespace markhuot\CraftQL\Directives;
 
+use GraphQL\Language\DirectiveLocation;
 use GraphQL\Type\Definition\EnumType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Definition\Directive;
-use GraphQL\Type\Definition\DirectiveLocation;
 use GraphQL\Type\Definition\FieldArgument;
 
 class Date {
@@ -41,6 +41,11 @@ class Date {
                     'name' => 'format',
                     'type' => static::dateFormatTypesEnum(),
                     'description' => 'A standard format to use, overrides the `as` argument',
+                ]),
+                new FieldArgument([
+                    'name' => 'locale',
+                    'type' => Type::string(),
+                    'description' => 'The locale to use when formatting the date',
                 ])
             ]
         ]);

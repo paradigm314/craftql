@@ -34,7 +34,7 @@ trait HasTypeAttribute {
     }
 
     /**
-     * Get the GraphQL compatable type
+     * Get the GraphQL compatible type
      *
      * @return Type
      */
@@ -51,6 +51,10 @@ trait HasTypeAttribute {
 
         else if (is_a($type, InputSchema::class) || is_subclass_of($type, InputSchema::class)) {
             $rawType = $type->getRawGraphQLType();
+        }
+
+        else if (is_a($type, Union::class) || is_subclass_of($type, Union::class)) {
+            $rawType = $type->getRawType();
         }
 
         else {

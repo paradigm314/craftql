@@ -3,7 +3,6 @@
 namespace markhuot\CraftQL\FieldBehaviors;
 
 use markhuot\CraftQL\Behaviors\FieldBehavior;
-use markhuot\CraftQL\Builders\InputSchema;
 
 class EntryQueryArguments extends FieldBehavior {
 
@@ -35,6 +34,8 @@ class EntryQueryArguments extends FieldBehavior {
         $this->owner->addIntArgument('positionedAfter');
         $this->owner->addIntArgument('positionedBefore');
         $this->owner->addStringArgument('postDate');
+        $this->owner->addStringArgument('dateCreated');
+        $this->owner->addStringArgument('dateUpdated');
         $this->owner->addIntArgument('prevSiblingOf');
         $this->owner->addStringArgument('relatedTo')->lists()->type($this->relatedToInputObject());
         $this->owner->addStringArgument('orRelatedTo')->lists()->type($this->relatedToInputObject());
@@ -58,11 +59,11 @@ class EntryQueryArguments extends FieldBehavior {
         }
 
         $type = $this->owner->createInputObjectType('RelatedToInputType');
-        $type->addIntArgument('element');
+        $type->addIntArgument('element')->lists();
         $type->addBooleanArgument('elementIsEdge');
-        $type->addIntArgument('sourceElement');
+        $type->addIntArgument('sourceElement')->lists();
         $type->addBooleanArgument('sourceElementIsEdge');
-        $type->addIntArgument('targetElement');
+        $type->addIntArgument('targetElement')->lists();
         $type->addBooleanArgument('targetElementIsEdge');
         $type->addStringArgument('field');
         $type->addStringArgument('sourceLocale');

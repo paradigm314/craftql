@@ -2,7 +2,11 @@
 
 namespace markhuot\CraftQL\Listeners;
 
+use markhuot\CraftQL\CraftQL;
 use markhuot\CraftQL\Helpers\StringHelper;
+use markhuot\CraftQL\Types\MultiOptionFieldData;
+use yii\Log\Logger;
+
 class GetSelectMultipleFieldSchema
 {
     /**
@@ -16,9 +20,22 @@ class GetSelectMultipleFieldSchema
 
         $craftField = $event->sender;
 
+        try {
+            $values = GetSelectOneFieldSchema::valuesForField($craftField);
+        }
+        catch (\Exception $e) {
+            if (CraftQL::getInstance()->getSettings()->throwSchemaBuildErrors) {
+                throw $e;
+            }
+            else {
+                \Craft::getLogger()->log('There was an issue building '.$craftField->handle.'. The error was: '.$e->getMessage(), Logger::LEVEL_WARNING);
+                return;
+            }
+        }
+
         $graphqlField = $event->schema->addEnumField($craftField)
             ->lists()
-            ->values([GetSelectOneFieldSchema::class, 'valuesForField'], $craftField)
+            ->values($values)
             ->resolve(function ($root, $args) use ($craftField) {
                 $values = [];
 
@@ -36,5 +53,19 @@ class GetSelectMultipleFieldSchema
         $event->mutation->addArgument($craftField)
             ->lists()
             ->type($graphqlField->getType());
+
+        $event->schema->addField("{$craftField->handle}_FieldData")
+            ->type(MultiOptionFieldData::class)
+            ->resolve(function ($root, $args, $context, $info) use ($craftField) {
+                return [
+                    'selected' => array_map(function ($option) {
+                        return [
+                            'label' => $option->label,
+                            'value' => $option->value,
+                        ];
+                    }, (array)$root->{$craftField->handle}),
+                    'options' => $root->{$craftField->handle}->getOptions(),
+                ];
+            });
     }
 }

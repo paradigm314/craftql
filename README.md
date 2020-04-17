@@ -290,6 +290,42 @@ For added functionality query categories and tags through their related `Connect
 }
 ```
 
+## Users
+
+Users can be queried via a top-level `users` field,
+
+```graphql
+{
+  users {
+    id
+    name
+    email
+  }
+}
+```
+
+You can also mutate users via the `upsertUser` field. When passed an `id:` it will update the user. If the `id:` attribute is missing it will create a new user,
+
+```graphql
+mutation {
+  upsertUser(id:1, firstName:"Mark", lastName:"Huot") {
+    id
+    name # returns `Mark Huot` after the mutation
+  }
+}
+```
+
+Permissions can be set as well, but you must _always_ pass the full list of permissions for the user. E.g.,
+
+```graphql
+mutation {
+  upsertUser(id:1, permissions:["accessCp","editEntries:17","createEntries:17","deleteEntries:17"]) {
+    id
+    name # returns `Mark Huot` after the mutation
+  }
+}
+```
+
 ## Security
 
 CraftQL supports GraphQl field level permissions. By default a token will have no rights. You must click into the "Scopes" section to adjust what each token can do.
@@ -298,7 +334,7 @@ CraftQL supports GraphQl field level permissions. By default a token will have n
 
 Scopes allow you to configure which GraphQL fields and entry types are included in the schema.
 
-## Third-pary Field Support
+## Third-party Field Support
 
 To add CraftQL support to your third-party field plugin you will need to listen to the `craftQlGetFieldSchema` event. This event, triggered on your custom field, will pass a "schema builder" into the event handler, allowing you to specify the field schema your custom field provides. For example, in your plugin's `::init` method you could specify,
 
@@ -376,7 +412,7 @@ No software is ever done. There's a lot still to do in order to make _CraftQL_ f
 
 ## Requirements
 
-- Craft 3.0.0-RC1
+- Craft 3.2.0+
 - PHP 7.0+
 
 ## Installation

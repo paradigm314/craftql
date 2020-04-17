@@ -5,6 +5,8 @@ namespace markhuot\CraftQL\Listeners;
 use Craft;
 use craft\helpers\ElementHelper;
 use markhuot\CraftQL\Events\GetFieldSchema;
+use markhuot\CraftQL\TypeModels\PageInfo;
+use markhuot\CraftQL\Types\CategoryConnection;
 
 class GetCategoriesFieldSchema
 {
@@ -27,7 +29,7 @@ class GetCategoriesFieldSchema
             return;
         }
 
-        if (preg_match('/^group:(\d+)$/', $field->source, $matches)) {
+        if (preg_match('/^group:(.+)$/', $field->source, $matches)) {
             $groupId = $matches[1];
 
             $event->schema->addField($field)
@@ -35,6 +37,21 @@ class GetCategoriesFieldSchema
                 ->type($event->schema->getRequest()->categoryGroups()->get($groupId))
                 ->resolve(function ($root, $args) use ($field) {
                     return $root->{$field->handle}->all();
+                });
+
+            $event->schema->addField($field->handle.'Connection')
+                ->type(CategoryConnection::class)
+                ->resolve(function ($root, $args) use ($field) {
+                    $criteria = $root->{$field->handle};
+                    $totalCount = $criteria->count();
+                    $offset = @$args['offset'] ?: 0;
+                    $perPage = @$args['limit'] ?: 100;
+
+                    return [
+                        'totalCount' => $totalCount,
+                        'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
+                        'edges' => $criteria->all(),
+                    ];
                 });
 
             $event->query->addStringArgument($field);

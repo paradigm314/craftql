@@ -3,11 +3,7 @@
 namespace markhuot\CraftQL\Types;
 
 use Craft;
-use GraphQL\Type\Definition\InterfaceType;
-use GraphQL\Type\Definition\EnumType;
-use GraphQL\Type\Definition\Type;
 use markhuot\CraftQL\FieldBehaviors\RelatedCategoriesField;
-use markhuot\CraftQL\Request;
 use markhuot\CraftQL\Builders\Schema;
 use markhuot\CraftQL\FieldBehaviors\RelatedEntriesField;
 
@@ -28,7 +24,9 @@ class EntryEdge extends Schema {
         $this->addField('drafts')
             ->type(EntryDraftConnection::class)
             ->resolve(function ($root, $args, $context, $info) {
-                $drafts = Craft::$app->entryRevisions->getDraftsByEntryId($root['node']->id);
+                /** @var \craft\elements\Entry $entry */
+                $entry = $root['node'];
+                $drafts = Craft::$app->entryRevisions->getDraftsByEntryId($entry->id, $entry->siteId, true);
                 return [
                     'totalCount' => count($drafts),
                     'pageInfo' => [

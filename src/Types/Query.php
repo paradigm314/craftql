@@ -11,6 +11,7 @@ use markhuot\CraftQL\FieldBehaviors\EntryQueryArguments;
 use markhuot\CraftQL\FieldBehaviors\UserQueryArguments;
 use markhuot\CraftQL\FieldBehaviors\CategoryQueryArguments;
 use markhuot\CraftQL\FieldBehaviors\TagQueryArguments;
+use markhuot\CraftQL\TypeModels\PageInfo;
 
 class Query extends Schema {
 
@@ -25,6 +26,10 @@ class Query extends Schema {
 
         // @TODO add plugin setting to control authorize visibility
         $this->addAuthSchema();
+
+        if ($token->can('query:sites')) {
+            $this->addSitesSchema();
+        }
 
         if ($token->canMatch('/^query:entrytype/')) {
             $this->addEntriesSchema();
@@ -47,30 +52,7 @@ class Query extends Schema {
         }
 
         if ($token->can('query:users')) {
-            $userResolver = function ($root, $args) {
-                $criteria = \craft\elements\User::find();
-
-                foreach ($args as $key => $value) {
-                    $criteria = $criteria->{$key}($value);
-                }
-
-                return $criteria;
-            };
-
-            $this->addField('users')
-                ->lists()
-                ->type(User::class)
-                ->use(new UserQueryArguments)
-                ->resolve(function ($root, $args) use ($userResolver) {
-                    return $userResolver($root, $args)->all();
-                });
-
-            $this->addField('user')
-                ->type(User::class)
-                ->use(new UserQueryArguments)
-                ->resolve(function ($root, $args) use ($userResolver) {
-                    return $userResolver($root, $args)->first();
-                });
+            $this->addUsersSchema();
         }
 
         if ($token->can('query:sections')) {
@@ -81,6 +63,34 @@ class Query extends Schema {
                     return \Craft::$app->sections->allSections;
                 });
         }
+    }
+
+    /**
+     * Adds sites to the schema
+     */
+    function addSitesSchema() {
+        $field = $this->addField('sites')
+            ->type(Site::class)
+            ->lists()
+            ->resolve(function ($root, $args) {
+                if (!empty($args['handle'])) {
+                    return [Craft::$app->sites->getSiteByHandle($args['handle'])];
+                }
+
+                if (!empty($args['id'])) {
+                    return [Craft::$app->sites->getSiteById($args['id'])];
+                }
+
+                if (!empty($args['primary'])) {
+                    return [Craft::$app->sites->getPrimarySite()];
+                }
+
+                return Craft::$app->sites->getAllSites();
+            });
+
+        $field->addStringArgument('handle');
+        $field->addIntArgument('id');
+        $field->addBooleanArgument('primary');
     }
 
     /**
@@ -107,12 +117,14 @@ class Query extends Schema {
              ->use(new EntryQueryArguments)
              ->resolve(function ($root, $args, $context, $info) {
                  $criteria = $this->getRequest()->entries(\craft\elements\Entry::find(), $root, $args, $context, $info);
-                 list($pageInfo, $entries) = \craft\helpers\Template::paginateCriteria($criteria);
+                 $totalCount = $criteria->count();
+                 $offset = @$args['offset'] ?: 0;
+                 $perPage = @$args['limit'] ?: 100;
 
                  return [
-                     'totalCount' => $pageInfo->total,
-                     'pageInfo' => $pageInfo,
-                     'edges' => $entries,
+                     'totalCount' => $totalCount,
+                     'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
+                     'edges' => $criteria->all(),
                      'criteria' => $criteria,
                      'args' => $args,
                  ];
@@ -137,8 +149,6 @@ class Query extends Schema {
 
     /**
      * The fields you can query that return assets
-     *
-     * @return Schema
      */
     function addAssetsSchema() {
         if ($this->getRequest()->volumes()->count() == 0) {
@@ -162,8 +172,6 @@ class Query extends Schema {
 
     /**
      * The fields you can query that return globals
-     *
-     * @return Schema
      */
     function addGlobalsSchema() {
 
@@ -216,8 +224,6 @@ class Query extends Schema {
 
     /**
      * The fields you can query that return tags
-     *
-     * @return Schema
      */
     function addTagsSchema() {
         if ($this->request->tagGroups()->count() == 0) {
@@ -248,6 +254,9 @@ class Query extends Schema {
             ->use(new TagQueryArguments)
             ->resolve(function ($root, $args, $context, $info) {
                 $criteria = \craft\elements\Tag::find();
+                $totalCount = $criteria->count();
+                $offset = @$args['offset'] ?: 0;
+                $perPage = @$args['limit'] ?: 100;
 
                 if (isset($args['group'])) {
                     $args['groupId'] = $args['group'];
@@ -258,12 +267,10 @@ class Query extends Schema {
                     $criteria = $criteria->{$key}($value);
                 }
 
-                list($pageInfo, $tags) = \craft\helpers\Template::paginateCriteria($criteria);
-
                 return [
-                    'totalCount' => $pageInfo->total,
-                    'pageInfo' => $pageInfo,
-                    'edges' => $tags,
+                    'totalCount' => $totalCount,
+                    'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
+                    'edges' => $criteria->all(),
                     'criteria' => $criteria,
                     'args' => $args,
                 ];
@@ -272,8 +279,6 @@ class Query extends Schema {
 
     /**
      * The fields you can query that return categories
-     *
-     * @return Schema
      */
     function addCategoriesSchema() {
         if ($this->request->categoryGroups()->count() == 0) {
@@ -307,19 +312,22 @@ class Query extends Schema {
             ->type(CategoryInterface::class)
             ->use(new CategoryQueryArguments)
             ->resolve(function ($root, $args) use ($categoryResolver) {
-                return $categoryResolver($root, $args)->first();
+                return $categoryResolver($root, $args)->one();
             });
 
         $this->addField('categoriesConnection')
             ->type(CategoryConnection::class)
             ->use(new CategoryQueryArguments)
             ->resolve(function ($root, $args) use ($categoryResolver) {
-                list($pageInfo, $categories) = \craft\helpers\Template::paginateCriteria($categoryResolver($root, $args));
+                $criteria = $categoryResolver($root, $args);
+                $totalCount = $criteria->count();
+                $offset = @$args['offset'] ?: 0;
+                $perPage = @$args['limit'] ?: 100;
 
                 return [
-                    'totalCount' => $pageInfo->total,
-                    'pageInfo' => $pageInfo,
-                    'edges' => $categories,
+                    'totalCount' => $totalCount,
+                    'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
+                    'edges' => $criteria->all(),
                 ];
             });
     }
@@ -372,6 +380,33 @@ class Query extends Schema {
             $tokenData->exp = time() + $defaultTokenDuration;
             return CraftQL::getInstance()->jwt->encode($tokenData);
         });
+    }
+
+    function addUsersSchema() {
+        $userResolver = function ($root, $args) {
+            $criteria = \craft\elements\User::find();
+
+            foreach ($args as $key => $value) {
+                $criteria = $criteria->{$key}($value);
+            }
+
+            return $criteria;
+        };
+
+        $this->addField('users')
+            ->lists()
+            ->type(User::class)
+            ->use(new UserQueryArguments)
+            ->resolve(function ($root, $args) use ($userResolver) {
+                return $userResolver($root, $args)->all();
+            });
+
+        $this->addField('user')
+            ->type(User::class)
+            ->use(new UserQueryArguments)
+            ->resolve(function ($root, $args) use ($userResolver) {
+                return $userResolver($root, $args)->one();
+            });
     }
 
 }

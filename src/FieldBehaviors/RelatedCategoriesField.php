@@ -3,8 +3,8 @@
 namespace markhuot\CraftQL\FieldBehaviors;
 
 use markhuot\CraftQL\Behaviors\SchemaBehavior;
+use markhuot\CraftQL\TypeModels\PageInfo;
 use markhuot\CraftQL\Types\CategoryConnection;
-use markhuot\CraftQL\Types\EntryConnection;
 
 class RelatedCategoriesField extends SchemaBehavior {
 
@@ -23,12 +23,14 @@ class RelatedCategoriesField extends SchemaBehavior {
                     $criteria->relatedTo(@$root['node']->id);
                 }
 
-                list($pageInfo, $categories) = \craft\helpers\Template::paginateCriteria($criteria);
+                $totalCount = $criteria->count();
+                $offset = @$args['offset'] ?: 0;
+                $perPage = @$args['limit'] ?: 100;
 
                 return [
-                    'totalCount' => $pageInfo->total,
-                    'pageInfo' => $pageInfo,
-                    'edges' => $categories,
+                    'totalCount' => $totalCount,
+                    'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
+                    'edges' => $criteria->all(),
                 ];
             });
     }

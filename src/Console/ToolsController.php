@@ -4,8 +4,6 @@ namespace markhuot\CraftQL\Console;
 
 use Craft;
 use GraphQL\Utils\SchemaPrinter;
-use React\EventLoop\Factory;
-use React\Socket\Server;
 use React\Http\Response;
 use React\Http\Server as HttpServer;
 use React\Promise\Promise;
@@ -88,7 +86,8 @@ class ToolsController extends Controller
                             $headers['Access-Control-Allow-Origin'] = $origin;
                         }
                         $headers['Access-Control-Allow-Credentials'] = 'true';
-                        $headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type';
+                        $headers['Access-Control-Allow-Headers'] = implode(', ', CraftQL::getInstance()->getSettings()->allowedHeaders);
+
                     }
                     $headers['Allow'] = implode(', ', CraftQL::getInstance()->getSettings()->verbs);
 

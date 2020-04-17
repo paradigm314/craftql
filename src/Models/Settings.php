@@ -3,18 +3,20 @@
 namespace markhuot\CraftQL\Models;
 
 use craft\base\Model;
-use markhuot\CraftQL\Models\Token;
 
 class Settings extends Model
 {
+    public $graphiqlFetchUrl = null; // defaults to siteUrl via CpController
     public $uri = 'api';
     public $verbs = ['POST'];
     public $allowedOrigins = [];
+    public $allowedHeaders = ['Authorization, Content-Type'];
     public $headers = [];
     public $securityKey = false;
     public $userTokenDuration = 60 * 60 * 4 /* 4 hours */;
     public $maxQueryDepth = false;
     public $maxQueryComplexity = false;
+    public $throwSchemaBuildErrors = false;
 
     function rules()
     {

@@ -1,8 +1,91 @@
-## dev-master
+## 1.3.4 - 2019-08-29
 
-- (none)
+### Fixed
 
-# 1.1.0 - 2018-06-27
+- Fixed a couple compatibility issues with graphql-php 0.12. ([#312](https://github.com/markhuot/craftql/issues/312)) 
+
+## 1.3.3 - 2019-08-28
+
+### Changed
+
+- CraftQL now requires Craft 3.2.0+.
+- CraftQL now requires graphql-php ^0.12.0, fixing compatibility with Craft 3.3. ([#309](https://github.com/markhuot/craftql/pull/309))
+
+### Fixed
+
+- Fixed an error that occurred on Craft 3.2.0+ when querying for entry drafts, if the `name` or `notes` fields were specified. ([#296](https://github.com/markhuot/craftql/pull/296))
+
+## 1.3.2 - 2019-04-15
+
+### Changed
+
+- CraftQL now requires Craft 3.1.19+.
+
+### Fixed
+
+- Fixed an error that occurred on Craft 3.1.19+. ([#248](https://github.com/markhuot/craftql/issues/248))
+- Fixed an error that occurred when fetching categories.
+- Fixed a bug where pagination limits weren’t being respected. 
+
+## 1.3.1 - 2019-01-29
+
+### Fixed
+
+- Fixed a bug where the `uid` improvements for 3.1.x from #210 were breaking on Craft 3.0.x ([#217](https://github.com/markhuot/craftql/issues/217))
+
+## 1.3.0 - 2019-01-24
+
+### Fixed
+
+- Updated category and tag factories to use the new `uid` format that Craft 3.1 uses ([#210](https://github.com/markhuot/craftql/issues/210))
+- Updated the `@date` directive to use the locale of the entry when formatting a date field ([#209](https://github.com/markhuot/craftql/issues/209))
+- Updated the `drafts` field to ensure custom fields load the correct content ([#208](https://github.com/markhuot/craftql/issues/208))
+- Updated unions to allow circular references in preparation for Neo integration ([#86](https://github.com/markhuot/craftql/issues/86))
+
+### Added
+
+- Added a `locale:` argument to the `@date` directive so you can override the date language ([#209](https://github.com/markhuot/craftql/issues/209))
+- Added query arguments to the `entriesConnection` custom fields ([#203](https://github.com/markhuot/craftql/issues/203))
+- Added the `dateUpdated` and `dateCreated` arguments when querying entries ([#201](https://github.com/markhuot/craftql/issues/201))
+
+## 1.2.1 - 2018-12-17
+
+### Fixed
+
+- Added field argument to custom Entries fields ([#202](https://github.com/markhuot/craftql/issues/202))
+- Adds `slug:` argument to entry mutations ([#199](https://github.com/markhuot/craftql/issues/199))
+- Adds `parentId:` argument to entry mutations ([#199](https://github.com/markhuot/craftql/issues/199))
+- Restored native `@skip` and `@include` directives ([#198](https://github.com/markhuot/craftql/issues/198))
+
+## 1.2.0 - 2018-12-07
+
+### Fixed
+- Released a bunch of features! ([#192](https://github.com/markhuot/craftql/issues/192))
+- Added `limit:` argument to asset fields on `EntryInterface` ([#191](https://github.com/markhuot/craftql/issues/191))
+- Added a scope for global mutations ([#185](https://github.com/markhuot/craftql/issues/185))
+- Added the ability to set `postDate` and `expiryDate` on `upsertEntryType` fields ([#181](https://github.com/markhuot/craftql/issues/181))
+- Fixed a bug where matrix fields were not saving all data because the field's `onSave` was not called ([#180](https://github.com/markhuot/craftql/issues/180))
+- Fixed a bug where a field in Craft points to a category group that no longer exists, it now silently skips the field ([#178](https://github.com/markhuot/craftql/issues/178))
+- Added a `*Connection` field to all category fields so you can get more detail from categories fields (yo dawg) ([#177](https://github.com/markhuot/craftql/issues/177))
+- Added a top level `upsertUser` which allows setting user fields when passed a user id or creates a new user when null ([#172](https://github.com/markhuot/craftql/issues/172))
+- Added an error message whenever CraftQL creates a bad GraphQL enum value through inference ([#156](https://github.com/markhuot/craftql/issues/156))
+- Added a `*_FieldData` field for all Select field types to allow pulling the possible options as well as the selected option ([#155](https://github.com/markhuot/craftql/issues/155))
+- Fixed a bug where Redactor fields were creating duplicate GraphQL Object Types with the same schema ([#153](https://github.com/markhuot/craftql/issues/153))
+- Added a `group:` argument to the top level `categories` field to filter the returned categories ([#152](https://github.com/markhuot/craftql/issues/152))
+- Added `parent`, `next`, `nextSibling`, `prev`, and `prevSibling` to `CategoryInterface` ([#149](https://github.com/markhuot/craftql/issues/149))
+- Fixed a bug where you couldn't perform a mutation without also having query scope access ([#146](https://github.com/markhuot/craftql/issues/146))
+- Changed the `relatedTo:` argument to support a list of element ids. This is backwards compatible because GraphQL allows single values to be treated as a list ([#144](https://github.com/markhuot/craftql/issues/144))
+- Increased the token field in the DB to `text` to support larger `scope` arrays ([#139](https://github.com/markhuot/craftql/issues/139))
+- Added support for [Geo Address](https://github.com/tdeNL/craftplugin-geoaddress) field types ([#138](https://github.com/markhuot/craftql/issues/138))
+- Added an `AlterQuerySchema` event to allow 3rd-parties to add root fields to the schema ([#134](https://github.com/markhuot/craftql/issues/134))
+- Fixed an upsert bug when trying to set an enum to `empty` because the Craft field handle is an empty string ([#129](https://github.com/markhuot/craftql/issues/129))
+- Added a top level `sites` field and associated query scope ([#123](https://github.com/markhuot/craftql/issues/123))
+- Added a `focalPoint` field to `VolumeInterface` ([#120](https://github.com/markhuot/craftql/issues/120))
+- Added the ability to query category children from a `categories` or `categoriesConnection` field ([#119](https://github.com/markhuot/craftql/issues/119))
+- Fixed a bug where new creating categories were failing during a mutation ([#116](https://github.com/markhuot/craftql/issues/116))
+- Fixed a bug where the `pageInfo` field was not calculated correctly on connections ([#115](https://github.com/markhuot/craftql/issues/115))
+
+## 1.1.0 - 2018-06-27
 
 - upsert mutations now set the `authorId` based on the token's user, where applicable.
 - #83 allows the top level `categories` field to accept an array of `id:` integers now.

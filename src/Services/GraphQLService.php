@@ -3,7 +3,6 @@
 namespace markhuot\CraftQL\Services;
 
 use Craft;
-use Egulias\EmailValidator\Exception\CRLFAtTheEnd;
 use GraphQL\GraphQL;
 use GraphQL\Error\Debug;
 use GraphQL\Type\Definition\ObjectType;
@@ -12,8 +11,8 @@ use GraphQL\Validator\DocumentValidator;
 use GraphQL\Validator\Rules\QueryComplexity;
 use GraphQL\Validator\Rules\QueryDepth;
 use markhuot\CraftQL\CraftQL;
+use markhuot\CraftQL\Events\AlterQuerySchema;
 use yii\base\Component;
-use Yii;
 
 class GraphQLService extends Component {
 
@@ -77,8 +76,15 @@ class GraphQLService extends Component {
         $request->addGlobals(new \markhuot\CraftQL\Factories\Globals($this->globals, $request));
 
         $schemaConfig = [];
-        $schemaConfig['query'] = (new \markhuot\CraftQL\Types\Query($request))->getRawGraphQLObject();
-        $schemaConfig['types'] = function () use ($request) {
+
+        $query = new \markhuot\CraftQL\Types\Query($request);
+
+        $event = new AlterQuerySchema;
+        $event->query = $query;
+        $query->trigger(AlterQuerySchema::EVENT, $event);
+
+        $schemaConfig['query'] = $query->getRawGraphQLObject();
+        $schemaConfig['types'] = function () use ($request, $query) {
             return array_merge(
                 array_map(function ($section) {
                     return $section->getRawGraphQLObject();
@@ -100,13 +106,15 @@ class GraphQLService extends Component {
                     return $entryType->getRawGraphQLObject();
                 }, $request->entryTypes()->all()),
 
-                [\markhuot\CraftQL\Directives\Date::dateFormatTypesEnum()]
+                [\markhuot\CraftQL\Directives\Date::dateFormatTypesEnum()],
+
+                $query->getConcreteTypes()
             );
         };
 
-        $schemaConfig['directives'] = [
+        $schemaConfig['directives'] = array_merge(GraphQL::getStandardDirectives(), [
             \markhuot\CraftQL\Directives\Date::directive(),
-        ];
+        ]);
 
         /** @var ObjectType $mutation */
         $mutation = (new \markhuot\CraftQL\Types\Mutation($request))->getRawGraphQLObject();

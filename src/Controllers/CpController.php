@@ -6,7 +6,6 @@ use Craft;
 use markhuot\CraftQL\GraphiQLAssetBundle;
 use Yii;
 use craft\web\Controller;
-use markhuot\CraftQL\CraftQL;
 use markhuot\CraftQL\Models\Token;
 
 class CpController extends Controller
@@ -55,28 +54,28 @@ class CpController extends Controller
 
     function actionGraphiql()
     {
-        $url = \craft\helpers\UrlHelper::siteUrl();
         $instance = \markhuot\CraftQL\CraftQL::getInstance();
+        $graphiqlFetchUrl = $instance->settings->graphiqlFetchUrl ?? \craft\helpers\UrlHelper::siteUrl();
         $uri = $instance->settings->uri;
 
         $this->view->registerAssetBundle(GraphiQLAssetBundle::class);
 
         $this->renderTemplate('craftql/graphiql', [
-            'url' => "{$url}{$uri}",
+            'url' => "{$graphiqlFetchUrl}{$uri}",
             'token' => false,
         ]);
     }
 
     function actionGraphiqlas($token)
     {
-        $url = \craft\helpers\UrlHelper::siteUrl();
         $instance = \markhuot\CraftQL\CraftQL::getInstance();
+        $graphiqlFetchUrl = $instance->settings->graphiqlFetchUrl ?? \craft\helpers\UrlHelper::siteUrl();
         $uri = $instance->settings->uri;
 
         $this->view->registerAssetBundle(GraphiQLAssetBundle::class);
 
         $this->renderTemplate('craftql/graphiql', [
-            'url' => "{$url}{$uri}",
+            'url' => "{$graphiqlFetchUrl}{$uri}",
             'token' => $token,
         ]);
     }

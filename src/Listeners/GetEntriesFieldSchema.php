@@ -2,6 +2,8 @@
 
 namespace markhuot\CraftQL\Listeners;
 
+use markhuot\CraftQL\FieldBehaviors\EntryQueryArguments;
+use markhuot\CraftQL\TypeModels\PageInfo;
 use markhuot\CraftQL\Types\EntryInterface;
 use markhuot\CraftQL\Types\EntryConnection;
 
@@ -21,6 +23,7 @@ class GetEntriesFieldSchema
 
         $event->schema->addField($field)
             ->type(EntryInterface::class)
+            ->use(new EntryQueryArguments)
             ->lists()
             ->resolve(function ($root, $args, $context, $info) use ($field, $request) {
                 return $request->entries($root->{$field->handle}, $root, $args, $context, $info)
@@ -29,15 +32,18 @@ class GetEntriesFieldSchema
 
         $event->schema->addField($field)
             ->type(EntryConnection::class)
+            ->use(new EntryQueryArguments)
             ->name("{$field->handle}Connection")
             ->resolve(function ($root, $args, $context, $info) use ($field, $request) {
                 $criteria = $request->entries($root->{$field->handle}, $root, $args, $context, $info);
-                list($pageInfo, $entries) = \craft\helpers\Template::paginateCriteria($criteria);
+                $totalCount = $criteria->count();
+                $offset = @$args['offset'] ?: 0;
+                $perPage = @$args['limit'] ?: 100;
 
                 return [
-                    'totalCount' => $pageInfo->total,
-                    'pageInfo' => $pageInfo,
-                    'edges' => $entries,
+                    'totalCount' => $totalCount,
+                    'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
+                    'edges' => $criteria->all(),
                     'criteria' => $criteria,
                     'args' => $args,
                 ];
