@@ -346,13 +346,10 @@ class Query extends Schema {
             // Does a user exist with that username/email?
             $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($loginName);
 
-            // Delay randomly between 0 and 1.5 seconds.
-            usleep(random_int(0, 1500000));
-
             if (!$user || $user->password === null) {
-                // Delay again to match $user->authenticate()'s delay
+                // Delay to match $user->authenticate()'s delay
                 Craft::$app->getSecurity()->validatePassword('p@ss1w0rd', '$2y$13$nj9aiBeb7RfEfYP3Cum6Revyu14QelGGxwcnFUKXIrQUitSodEPRi');
-                throw new UserError('Invalid credentials.');
+                throw new UserError('invalid_credentials');
             }
 
             // Did they submit a valid password, and is the user capable of being logged-in?
