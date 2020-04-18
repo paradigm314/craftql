@@ -40,7 +40,6 @@ class ApiController extends Controller
     function actionIndex()
     {
         $response = \Craft::$app->getResponse();
-        $token = false;
         $result = false;
 
         $authorization = Craft::$app->request->headers->get('authorization');
@@ -72,15 +71,6 @@ class ApiController extends Controller
             return '';
         }
 
-        if (!$token) {
-            http_response_code(403);
-            return $this->asJson([
-                'errors' => [
-                    ['message' => 'Not authorized']
-                ]
-            ]);
-        }
-
         Craft::debug('CraftQL: Parsing request');
         if (Craft::$app->request->isPost && $query=Craft::$app->request->post('query')) {
             $input = $query;
@@ -110,7 +100,7 @@ class ApiController extends Controller
         $useCache = key_exists('useCache', $config) && $config['useCache'] === true;
 
         if ($useCache) {
-            Craft::trace('CraftQL: Checking cache');
+            Craft::debug('CraftQL: Checking cache');
             $cache    = Craft::$app->getCache();
             $cacheKey = $cache->buildKey([$input, $variables]);
 
@@ -120,29 +110,29 @@ class ApiController extends Controller
         }
 
         if(!$result) {
-            Craft::trace('CraftQL: Parsing request complete');
+            Craft::debug('CraftQL: Parsing request complete');
 
-            Craft::trace('CraftQL: Bootstrapping');
-            $this->graphQl->bootstrap();
-            Craft::trace('CraftQL: Bootstrapping complete');
+            Craft::debug('CraftQL: Bootstrapping');
+            CraftQL::getInstance()->graphQl->bootstrap();
+            Craft::debug('CraftQL: Bootstrapping complete');
 
-            Craft::trace('CraftQL: Fetching schema');
-            $schema = $this->graphQl->getSchema($token);
-            Craft::trace('CraftQL: Schema built');
+            Craft::debug('CraftQL: Fetching schema');
+            $schema = CraftQL::getInstance()->graphQl->getSchema($token);
+            Craft::debug('CraftQL: Schema built');
 
-            Craft::trace('CraftQL: Executing query');
+            Craft::debug('CraftQL: Executing query');
 
             $config   = Craft::$app->getConfig()->getConfigFromFile('craftql');
 
-            $result = $this->graphQl->execute($schema, $input, $variables);
+            $result = CraftQL::getInstance()->graphQl->execute($schema, $input, $variables);
 
             if($useCache) {
-                Craft::trace('CraftQL: Updating cache');
+                Craft::debug('CraftQL: Updating cache');
                 $cache->set($cacheKey, $result);
             }
         }
 
-        Craft::trace('CraftQL: Execution complete');
+        Craft::debug('CraftQL: Execution complete');
 
         $customHeaders = CraftQL::getInstance()->getSettings()->headers ?: [];
         foreach ($customHeaders as $key => $value) {
