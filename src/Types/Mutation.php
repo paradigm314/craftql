@@ -50,19 +50,29 @@ class Mutation extends Schema {
             }
         }
 
-        if ($this->request->token()->can('mutate:users')) {
+        if ($this->request->token()->can('mutate:users:new') || $this->request->token()->can('mutate:users') || $this->request->token()->can('mutate:users:self')) {
             $updateUser = $this->addField('upsertUser')
                 ->type(User::class)
                 ->resolve(function ($root, $args, $context, $info) {
                     $values = $args;
+                    $token = $this->request->token();
+                    $new = empty($args['id']) 
 
-                    if (!empty($args['id'])) {
+                    if (!$new) {
                         $userId = @$args['id'];
                         unset($values['id']);
+
+                        if($token->canNot('mutate:users') && $token->canNot('mutate:users:self')) {
+                            throw new UserError('unauthorized')
+                        }
 
                         $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
                         if (!$user) {
                             throw new UserError('Could not find user '.$userId);
+                        }
+
+                        if($token->canNot('mutate:users') && $user->id != $token->getUser()->id) {
+                            throw new UserError('unauthorized')
                         }
                     }
                     else {
@@ -74,6 +84,10 @@ class Mutation extends Schema {
                             $user->{$fieldName} = $values[$fieldName];
                             unset($values[$fieldName]);
                         }
+                    }
+
+                    if(isset($values['password'])) {
+                        $user->newPassword = $values['password']
                     }
 
                     $permissions = [];
@@ -110,6 +124,7 @@ class Mutation extends Schema {
             $updateUser->addStringArgument('lastName');
             $updateUser->addStringArgument('username');
             $updateUser->addStringArgument('email');
+            $updateUser->addStringArgument('password');
 
             if ($this->request->token()->can('mutate:userPermissions')) {
                 $updateUser->addStringArgument('permissions')->lists();

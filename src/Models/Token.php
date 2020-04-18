@@ -116,6 +116,7 @@ class Token extends ActiveRecord
      */
     public function makeAdmin() {
         $this->admin = true;
+        $this->scopes = json_encode(['mutate:users:new' => 1])
         return $this;
     }
 
@@ -186,7 +187,7 @@ class Token extends ActiveRecord
     }
 
     function can($do): bool {
-        return $this->admin || @$this->scopeArray[$do] ?: false;
+        return $this->admin || $this->getScopeArray()[$do] ?: false;
     }
 
     function canNot($do): bool {
@@ -200,7 +201,7 @@ class Token extends ActiveRecord
 
         $scopes = [];
 
-        foreach ($this->scopeArray as $key => $value) {
+        foreach ($this->getScopeArray() as $key => $value) {
             if ($value > 0 && preg_match($regex, $key)) {
                 $scopes[] = $key;
             }
