@@ -116,7 +116,6 @@ class Token extends ActiveRecord
      */
     public function makeAdmin() {
         $this->admin = true;
-        $this->scopes = json_encode(['mutate:users:new' => 1]);
         return $this;
     }
 
@@ -136,6 +135,7 @@ class Token extends ActiveRecord
      */
     public function makeAnonymous() {
         $this->anonymous = true;
+        $this->scopes = json_encode(['mutate:users:new' => 1]);
         return $this;
     }
 
