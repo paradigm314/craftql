@@ -116,7 +116,7 @@ class Token extends ActiveRecord
      */
     public function makeAdmin() {
         $this->admin = true;
-        $this->scopes = json_encode(['mutate:users:new' => 1])
+        $this->scopes = json_encode(['mutate:users:new' => 1]);
         return $this;
     }
 

@@ -35,13 +35,13 @@ class GetUserPermissions
             'craftql:query:sections' => ['label' => \Craft::t('craftql', 'Query Sections')],
             'craftql:query:fields' => ['label' => \Craft::t('craftql', 'Query Fields')],
             'craftql:mutate:entries' => ['label' => \Craft::t('craftql', 'Mutate Entries'), 'nested' => $mutationTypes],
-            'craftql:mutate:globals' => ['label' => \Craft::t('craftql', 'Mutate Globals')
+            'craftql:mutate:globals' => ['label' => \Craft::t('craftql', 'Mutate Globals')],
             'craftql:mutate:users' => [
                 'label' => \Craft::t('craftql', 'Mutate Users'), 
                 'nested' => [
                     'craftql:mutate:users:self' => ['label' => \Craft::t('craftql', 'Mutate thier own user.')]
                 ]
-            ],
+            ]
         ];
     }
 }

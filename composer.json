@@ -35,5 +35,8 @@
             "graphQl": "markhuot\\CraftQL\\Services\\GraphQLService",
             "jwt": "markhuot\\CraftQL\\Services\\JWTService"
         }
+    },
+    "require-dev": {
+        "overtrue/phplint": "^2.0"
     }
 }

@@ -56,14 +56,14 @@ class Mutation extends Schema {
                 ->resolve(function ($root, $args, $context, $info) {
                     $values = $args;
                     $token = $this->request->token();
-                    $new = empty($args['id']) 
+                    $new = empty($args['id']);
 
                     if (!$new) {
                         $userId = @$args['id'];
                         unset($values['id']);
 
                         if($token->canNot('mutate:users') && $token->canNot('mutate:users:self')) {
-                            throw new UserError('unauthorized')
+                            throw new UserError('unauthorized');
                         }
 
                         $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
@@ -72,7 +72,7 @@ class Mutation extends Schema {
                         }
 
                         if($token->canNot('mutate:users') && $user->id != $token->getUser()->id) {
-                            throw new UserError('unauthorized')
+                            throw new UserError('unauthorized');
                         }
                     }
                     else {
@@ -87,7 +87,7 @@ class Mutation extends Schema {
                     }
 
                     if(isset($values['password'])) {
-                        $user->newPassword = $values['password']
+                        $user->newPassword = $values['password'];
                     }
 
                     $permissions = [];
