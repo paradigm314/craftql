@@ -50,7 +50,7 @@ class Mutation extends Schema {
             }
         }
 
-        if ($this->request->token()->can('mutate:users:new') || $this->request->token()->can('mutate:users') || $this->request->token()->can('mutate:users:self')) {
+        if ($token->canMatch('/^query:users/')) {
             $updateUser = $this->addField('upsertUser')
                 ->type(User::class)
                 ->resolve(function ($root, $args, $context, $info) {
@@ -62,7 +62,7 @@ class Mutation extends Schema {
                         $userId = @$args['id'];
                         unset($values['id']);
 
-                        if($token->canNot('mutate:users') && $token->canNot('mutate:users:self')) {
+                        if($token->canNot('mutate:users:all') && $token->canNot('mutate:users:self')) {
                             throw new UserError('unauthorized');
                         }
 
@@ -71,7 +71,7 @@ class Mutation extends Schema {
                             throw new UserError('Could not find user '.$userId);
                         }
 
-                        if($token->canNot('mutate:users') && $user->id != $token->getUser()->id) {
+                        if($token->canNot('mutate:users:all') && $user->id != $token->getUser()->id) {
                             throw new UserError('unauthorized');
                         }
                     }
@@ -126,7 +126,7 @@ class Mutation extends Schema {
             $updateUser->addStringArgument('email');
             $updateUser->addStringArgument('password');
 
-            if ($this->request->token()->can('mutate:userPermissions')) {
+            if ($this->request->token()->can('mutate:users:permissions')) {
                 $updateUser->addStringArgument('permissions')->lists();
             }
 

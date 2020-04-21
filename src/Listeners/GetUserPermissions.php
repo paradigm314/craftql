@@ -39,6 +39,8 @@ class GetUserPermissions
             'craftql:mutate:users' => [
                 'label' => \Craft::t('craftql', 'Mutate Users'), 
                 'nested' => [
+                    'craftql:mutate:users:all' => ['label' => \Craft::t('craftql', 'Mutate all users.')],
+                    'craftql:mutate:users:permissions' => ['label' => \Craft::t('craftql', 'Mutate users permissions.')],
                     'craftql:mutate:users:self' => ['label' => \Craft::t('craftql', 'Mutate thier own user.')]
                 ]
             ]

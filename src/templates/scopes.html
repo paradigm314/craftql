@@ -160,12 +160,12 @@
             <tr data-id="default">
                 <td>users</td>
                 <td>Add and update users</td>
-                <td>{{ forms.lightswitch({"name": "scope[mutate:users]", "value": 1, "on": token.can("mutate:users"), "small": true}) }}</td>
+                <td>{{ forms.lightswitch({"name": "scope[mutate:users:all]", "value": 1, "on": token.can("mutate:users:all"), "small": true}) }}</td>
             </tr>
             <tr data-id="default">
                 <td>user.permissions</td>
                 <td>Set user permissions</td>
-                <td>{{ forms.lightswitch({"name": "scope[mutate:userPermissions]", "value": 1, "on": token.can("mutate:users"), "small": true}) }}</td>
+                <td>{{ forms.lightswitch({"name": "scope[mutate:users:permissions]", "value": 1, "on": token.can("mutate:users:permissions"), "small": true}) }}</td>
             </tr>
             <tr data-id="default">
                 <td>globals</td>
