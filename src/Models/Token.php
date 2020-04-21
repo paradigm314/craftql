@@ -187,7 +187,7 @@ class Token extends ActiveRecord
     }
 
     function can($do): bool {
-        return $this->admin || $this->getScopeArray()[$do] ?: false;
+        return $this->admin || @$this->getScopeArray()[$do] ?: false;
     }
 
     function canNot($do): bool {
