@@ -88,6 +88,7 @@ class Mutation extends Schema {
 
                     if(isset($values['password'])) {
                         $user->newPassword = $values['password'];
+                        unset($values['password']);
                     }
 
                     $permissions = [];
@@ -133,38 +134,6 @@ class Mutation extends Schema {
             $fieldLayout = Craft::$app->getFields()->getLayoutByType(\craft\elements\User::class);
             $updateUser->addArgumentsByLayoutId($fieldLayout->id);
         }
-
-        // $fields['upsertField'] = [
-        //     'type' => \markhuot\CraftQL\Types\Entry::interface($request),
-        //     'args' => [
-        //         'id' => Type::nonNull(Type::int()),
-        //         'json' => Type::nonNull(Type::string()),
-        //     ],
-        //     'resolve' => function ($root, $args) {
-        //         $entry = \craft\elements\Entry::find();
-        //         $entry->id($args['id']);
-        //         $entry = $entry->one();
-
-        //         $json = json_decode($args['json'], true);
-        //         $fieldData = [];
-        //         foreach ($json as $fieldName => $value) {
-        //             if (in_array($fieldName, ['title'])) {
-        //                 $entry->{$fieldName} = $value;
-        //             }
-        //             else {
-        //                 $fieldData[$fieldName] = $value;
-        //             }
-        //         }
-
-        //         if (!empty($fieldData)) {
-        //             $entry->setFieldValues($fieldData);
-        //         }
-
-        //         Craft::$app->elements->saveElement($entry);
-
-        //         return $entry;
-        //     },
-        // ];
     }
 
 }
