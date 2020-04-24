@@ -122,8 +122,6 @@ class ApiController extends Controller
 
             Craft::debug('CraftQL: Executing query');
 
-            $config   = Craft::$app->getConfig()->getConfigFromFile('craftql');
-
             $result = CraftQL::getInstance()->graphQl->execute($schema, $input, $variables);
 
             if($useCache) {

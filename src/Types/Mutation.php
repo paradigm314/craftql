@@ -50,7 +50,7 @@ class Mutation extends Schema {
             }
         }
 
-        if ($this->request->token()->canMatch('/^query:users/')) {
+        if ($this->request->token()->canMatch('/^mutate:users/')) {
             $updateUser = $this->addField('upsertUser')
                 ->type(User::class)
                 ->resolve(function ($root, $args, $context, $info) {
