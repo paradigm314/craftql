@@ -53,6 +53,7 @@ class Mutation extends Schema {
         if ($this->request->token()->canMatch('/^mutate:users/')) {
             $updateUser = $this->addField('upsertUser')
                 ->type(User::class)
+                ->addStringField('token')
                 ->resolve(function ($root, $args, $context, $info) {
                     $values = $args;
                     $token = $this->request->token();
@@ -111,6 +112,13 @@ class Mutation extends Schema {
                                 }
                             }
                         }
+                    }
+
+                    if($new) {
+                        Craft::$app->users->assignUserToDefaultGroup($user);
+                        $user->token = CraftQL::getInstance()->jwt->tokenForUser($user);
+                    } else {
+                        $user->token = null;
                     }
 
                     if (!empty($permissions)) {
