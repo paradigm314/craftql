@@ -53,7 +53,6 @@ class Mutation extends Schema {
         if ($this->request->token()->canMatch('/^mutate:users/')) {
             $updateUser = $this->addField('upsertUser')
                 ->type(User::class)
-                ->addStringField('token')
                 ->resolve(function ($root, $args, $context, $info) {
                     $values = $args;
                     $token = $this->request->token();
