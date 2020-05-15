@@ -115,9 +115,9 @@ class Mutation extends Schema {
 
                     if($new) {
                         Craft::$app->users->assignUserToDefaultGroup($user);
-                        $user->token = CraftQL::getInstance()->jwt->tokenForUser($user);
+                        //$user->token = CraftQL::getInstance()->jwt->tokenForUser($user);
                     } else {
-                        $user->token = null;
+                        //$user->token = null;
                     }
 
                     if (!empty($permissions)) {
