@@ -52,80 +52,7 @@ class Mutation extends Schema {
 
         if ($this->request->token()->canMatch('/^mutate:users/')) {
             $updateUser = $this->addField('upsertUser')
-                ->type(User::class)
-                ->resolve(function ($root, $args, $context, $info) {
-                    $values = $args;
-                    $token = $this->request->token();
-                    $new = empty($args['id']);
-
-                    if (!$new) {
-                        $userId = @$args['id'];
-                        unset($values['id']);
-
-                        if($token->canNot('mutate:users:all') && $token->canNot('mutate:users:self')) {
-                            throw new UserError('unauthorized');
-                        }
-
-                        $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
-                        if (!$user) {
-                            throw new UserError('Could not find user '.$userId);
-                        }
-
-                        if($token->canNot('mutate:users:all') && $user->id != $token->getUser()->id) {
-                            throw new UserError('unauthorized');
-                        }
-                    }
-                    else {
-                        $user = new \craft\elements\User;
-                    }
-
-                    foreach (['firstName', 'lastName', 'username', 'email'] as $fieldName) {
-                        if (isset($values[$fieldName])) {
-                            $user->{$fieldName} = $values[$fieldName];
-                            unset($values[$fieldName]);
-                        }
-                    }
-
-                    if(isset($values['password'])) {
-                        $user->newPassword = $values['password'];
-                        unset($values['password']);
-                    }
-
-                    $permissions = [];
-                    if (!empty($values['permissions'])) {
-                        $permissions = $values['permissions'];
-                        unset($values['permissions']);
-                    }
-
-                    if (!empty($values)) {
-                        $user->setFieldValues($values);
-                    }
-
-                    $user->setScenario(Element::SCENARIO_LIVE);
-
-                    if (!Craft::$app->elements->saveElement($user)) {
-                        if (!empty($user->getErrors())) {
-                            foreach ($user->getErrors() as $key => $errors) {
-                                foreach ($errors as $error) {
-                                    throw new UserError($error);
-                                }
-                            }
-                        }
-                    }
-
-                    if($new) {
-                        Craft::$app->users->assignUserToDefaultGroup($user);
-                        //$user->token = CraftQL::getInstance()->jwt->tokenForUser($user);
-                    } else {
-                        //$user->token = null;
-                    }
-
-                    if (!empty($permissions)) {
-                        Craft::$app->getUserPermissions()->saveUserPermissions($user->id, $permissions);
-                    }
-
-                    return $user;
-                });
+                ->type(User::class);
 
             $updateUser->addIntArgument('id');
             $updateUser->addStringArgument('firstName');
@@ -140,6 +67,88 @@ class Mutation extends Schema {
 
             $fieldLayout = Craft::$app->getFields()->getLayoutByType(\craft\elements\User::class);
             $updateUser->addArgumentsByLayoutId($fieldLayout->id);
+
+            $updateUser->resolve(function ($root, $args, $context, $info) use ($updateUser) {
+
+                $values = $args;
+                $token = $this->request->token();
+                $new = empty($args['id']);
+
+                if (!$new) {
+                    $userId = @$args['id'];
+                    unset($values['id']);
+
+                    if($token->canNot('mutate:users:all') && $token->canNot('mutate:users:self')) {
+                        throw new UserError('unauthorized');
+                    }
+
+                    $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
+                    if (!$user) {
+                        throw new UserError('Could not find user '.$userId);
+                    }
+
+                    if($token->canNot('mutate:users:all') && $user->id != $token->getUser()->id) {
+                        throw new UserError('unauthorized');
+                    }
+                }
+                else {
+                    $user = new \craft\elements\User;
+                }
+
+                foreach (['firstName', 'lastName', 'username', 'email'] as $fieldName) {
+                    if (isset($values[$fieldName])) {
+                        $user->{$fieldName} = $values[$fieldName];
+                        unset($values[$fieldName]);
+                    }
+                }
+
+                if(isset($values['password'])) {
+                    $user->newPassword = $values['password'];
+                    unset($values['password']);
+                }
+
+                $permissions = [];
+                if (!empty($values['permissions'])) {
+                    $permissions = $values['permissions'];
+                    unset($values['permissions']);
+                }
+
+                foreach ($values as $handle => &$value) {
+                    $callback = $updateUser->getArgument($handle)->getOnSave();
+                    if ($callback) {
+                        $value = $callback($value);
+                    }
+                }
+
+                if (!empty($values)) {
+                    $user->setFieldValues($values);
+                }
+
+                $user->setScenario(Element::SCENARIO_LIVE);
+
+                if (!Craft::$app->elements->saveElement($user)) {
+                    if (!empty($user->getErrors())) {
+                        foreach ($user->getErrors() as $key => $errors) {
+                            foreach ($errors as $error) {
+                                throw new UserError($error);
+                            }
+                        }
+                    }
+                }
+
+                if($new) {
+                    Craft::$app->users->assignUserToDefaultGroup($user);
+                    //$user->token = CraftQL::getInstance()->jwt->tokenForUser($user);
+                } else {
+                    //$user->token = null;
+                }
+
+                if (!empty($permissions)) {
+                    Craft::$app->getUserPermissions()->saveUserPermissions($user->id, $permissions);
+                }
+
+                return $user;
+            });
         }
     }
 

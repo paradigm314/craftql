@@ -149,9 +149,6 @@ class Request {
             unset($args['idNot']);
         }
 
-//         var_dump($args);
-//         die;
-
         foreach ($args as $key => $value) {
             $criteria = $criteria->{$key}($value);
         }
