@@ -150,6 +150,43 @@ class Mutation extends Schema {
                 return $user;
             });
         }
+
+        if ($this->request->token()->canMatch('/^mutate:users/')) {
+            $deleteUser = $this->addField('deleteUser')
+                ->type(User::class);
+
+            $deleteUser->addIntArgument('id')->nonNull();
+
+            $fieldLayout = Craft::$app->getFields()->getLayoutByType(\craft\elements\User::class);
+
+            $deleteUser->resolve(function ($root, $args, $context, $info) use ($deleteUser) {
+
+                $values = $args;
+                $token = $this->request->token();
+                $userId = $args['id'];
+
+                if($token->canNot('mutate:users:all') && $token->canNot('mutate:users:self')) {
+                    throw new UserError('unauthorized');
+                }
+
+                $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
+                if (!$user) {
+                    throw new UserError('Could not find user '.$userId);
+                }
+
+                if($token->canNot('mutate:users:all') && $user->id != $token->getUser()->id) {
+                    throw new UserError('unauthorized');
+                }
+
+                $user->setScenario(Element::SCENARIO_LIVE);
+
+                if (!Craft::$app->elements->deleteElement($user)) {
+                    throw new UserError('delete.failed');
+                }
+
+                return $user;
+            });
+        }
     }
 
 }
