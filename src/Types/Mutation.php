@@ -61,7 +61,7 @@ class Mutation extends Schema {
             $updateUser->addStringArgument('username');
             $updateUser->addStringArgument('email');
             $updateUser->addStringArgument('password');
-            $updateUser->addStringArgument('photoUrl');
+            $updateUser->addStringArgument('photo');
 
             if ($this->request->token()->can('mutate:users:permissions')) {
                 $updateUser->addStringArgument('permissions')->lists();
@@ -141,7 +141,7 @@ class Mutation extends Schema {
 
                     Craft::$app->users->saveUserPhoto($fileLocation, $user);
 
-                    unset($values['photoUrl']);
+                    unset($values['photo']);
                 }
 
                 foreach ($values as $handle => &$value) {
