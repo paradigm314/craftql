@@ -3,6 +3,7 @@
 namespace markhuot\CraftQL\Types;
 
 use craft\base\Element;
+use craft\elements\Asset;
 use GraphQL\Error\UserError;
 use Craft;
 use markhuot\CraftQL\Builders\Schema;
@@ -60,6 +61,7 @@ class Mutation extends Schema {
             $updateUser->addStringArgument('username');
             $updateUser->addStringArgument('email');
             $updateUser->addStringArgument('password');
+            $updateUser->addStringArgument('photoUrl');
 
             if ($this->request->token()->can('mutate:users:permissions')) {
                 $updateUser->addStringArgument('permissions')->lists();
@@ -113,6 +115,35 @@ class Mutation extends Schema {
                     unset($values['permissions']);
                 }
 
+                if(!empty($values['photo'])) {
+                    $data = $values['photo'];
+
+                    if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
+                        $data = substr($data, strpos($data, ',') + 1);
+                        $type = strtolower($type[1]); // jpg, png, gif
+
+                        if (!in_array($type, [ 'jpg', 'jpeg', 'gif', 'png' ])) {
+                            throw new \Exception('invalid image type');
+                        }
+
+                        $photo = base64_decode($data);
+
+                        if ($data === false) {
+                            throw new \Exception('base64_decode failed');
+                        }
+                    } else {
+                        throw new \Exception('did not match data URI with image data');
+                    }
+
+                    $uploadPath = \craft\helpers\Assets::tempFilePath();
+                    $fileLocation = "{$uploadPath}/user_{$user->id}_photo.{$type}";
+                    file_put_contents($fileLocation, $photo);
+
+                    Craft::$app->users->saveUserPhoto($fileLocation, $user);
+
+                    unset($values['photoUrl']);
+                }
+
                 foreach ($values as $handle => &$value) {
                     $callback = $updateUser->getArgument($handle)->getOnSave();
                     if ($callback) {
@@ -138,9 +169,6 @@ class Mutation extends Schema {
 
                 if($new) {
                     Craft::$app->users->assignUserToDefaultGroup($user);
-                    //$user->token = CraftQL::getInstance()->jwt->tokenForUser($user);
-                } else {
-                    //$user->token = null;
                 }
 
                 if (!empty($permissions)) {
@@ -157,11 +185,8 @@ class Mutation extends Schema {
 
             $deleteUser->addIntArgument('id')->nonNull();
 
-            $fieldLayout = Craft::$app->getFields()->getLayoutByType(\craft\elements\User::class);
-
             $deleteUser->resolve(function ($root, $args, $context, $info) use ($deleteUser) {
 
-                $values = $args;
                 $token = $this->request->token();
                 $userId = $args['id'];
 

@@ -34,7 +34,6 @@ class GetAssetsFieldSchema
         $inputObject->addIntArgument('id');
         $inputObject->addStringArgument('url');
         $inputObject->addStringArgument('title');
-        // $inputObject->addFieldsByLayoutId();
 
         $event->mutation->addArgument($field)
             ->lists()
