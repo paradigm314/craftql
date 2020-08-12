@@ -135,11 +135,10 @@ class Mutation extends Schema {
                         throw new \Exception('did not match data URI with image data');
                     }
 
-                    $uploadPath = \craft\helpers\Assets::tempFilePath();
-                    $fileLocation = "{$uploadPath}/user_{$user->id}_photo.{$type}";
-                    file_put_contents($fileLocation, $photo);
+                    $uploadPath = \craft\helpers\Assets::tempFilePath($type);
+                    file_put_contents($uploadPath, $photo);
 
-                    Craft::$app->users->saveUserPhoto($fileLocation, $user);
+                    Craft::$app->users->saveUserPhoto($uploadPath, $user);
 
                     unset($values['photo']);
                 }
