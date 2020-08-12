@@ -128,7 +128,7 @@ class Mutation extends Schema {
 
                         $photo = base64_decode($data);
 
-                        if ($data === false) {
+                        if ($photo === false) {
                             throw new \Exception('base64_decode failed');
                         }
                     } else {
@@ -138,7 +138,9 @@ class Mutation extends Schema {
                     $uploadPath = \craft\helpers\Assets::tempFilePath($type);
                     file_put_contents($uploadPath, $photo);
 
-                    Craft::$app->users->saveUserPhoto($uploadPath, $user);
+                    $filename = "user_{$user->id}_photo.{$type}";
+
+                    Craft::$app->users->saveUserPhoto($uploadPath, $user, $filename);
 
                     unset($values['photo']);
                 }
