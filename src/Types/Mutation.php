@@ -115,6 +115,10 @@ class Mutation extends Schema {
                     unset($values['permissions']);
                 }
 
+                if($values['photo'] === null) {
+                    Craft::$app->users->deleteUserPhoto($user);
+                }
+
                 if(!empty($values['photo'])) {
                     $data = $values['photo'];
 
