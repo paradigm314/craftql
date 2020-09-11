@@ -115,7 +115,7 @@ class Mutation extends Schema {
                     unset($values['permissions']);
                 }
 
-                if($values['photo'] === null) {
+                if(array_key_exists('photo', $values) && $values['photo'] === null) {
                     if(isset($user->photoId)) {
                         Craft::$app->users->deleteUserPhoto($user);
                     }
