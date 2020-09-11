@@ -145,7 +145,9 @@ class Mutation extends Schema {
                     $uploadPath = \craft\helpers\Assets::tempFilePath($type);
                     file_put_contents($uploadPath, $photo);
 
-                    $filename = "user_{$user->id}_photo.{$type}";
+                    $uuid = craft\helpers\StringHelper::UUID();
+
+                    $filename = "user_{$uuid}_photo.{$type}";
 
                     Craft::$app->users->saveUserPhoto($uploadPath, $user, $filename);
 
