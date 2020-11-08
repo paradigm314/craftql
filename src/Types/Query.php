@@ -368,15 +368,6 @@ class Query extends Schema {
                 'token' => $tokenString,
             ];
         });
-
-        $field = $this->addStringField('refresh');
-        $field->addStringArgument('token')->nonNull();
-        $field->resolve(function ($root, $args) use ($defaultTokenDuration) {
-            $tokenData = $args['token'];
-            $tokenData = CraftQL::getInstance()->jwt->decode($tokenData);
-            $tokenData->exp = time() + $defaultTokenDuration;
-            return CraftQL::getInstance()->jwt->encode($tokenData);
-        });
     }
 
     function addUsersSchema() {

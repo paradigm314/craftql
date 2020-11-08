@@ -44,7 +44,17 @@ class ApiController extends Controller
 
         $authorization = Craft::$app->request->headers->get('authorization');
         preg_match('/^(?:b|B)earer\s+(?<tokenId>.+)/', $authorization, $matches);
-        $token = Token::findOrAnonymous(@$matches['tokenId']);
+        try {
+            $token = Token::findOrAnonymous(@$matches['tokenId']);
+        } catch ( \UnexpectedValueException
+                | \Firebase\JWT\SignatureInvalidException
+                | \Firebase\JWT\BeforeValidException
+                | \Firebase\JWT\ExpiredException $e) {
+            $response->setStatusCode(401);
+            $response->headers->add('Content-Type', 'application/json; charset=UTF-8');
+            return $this->asErrorJson($e->getMessage());
+        }
+
 
         if ($user = $token->getUser()) {
             $response->headers->add('Authorization', 'Bearer ' . CraftQL::getInstance()->jwt->tokenForUser($user));

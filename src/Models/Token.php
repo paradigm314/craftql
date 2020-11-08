@@ -50,6 +50,12 @@ class Token extends ActiveRecord
      *
      * @param bool $token
      * @return Token|null
+     *
+     * @throws \Firebase\JWT\UnexpectedValueException     Provided JWT was invalid
+     * @throws \Firebase\JWT\SignatureInvalidException    Provided JWT was invalid because the signature verification failed
+     * @throws \Firebase\JWT\BeforeValidException         Provided JWT is trying to be used before it's eligible as defined by 'nbf'
+     * @throws \Firebase\JWT\BeforeValidException         Provided JWT is trying to be used before it's been created as defined by 'iat'
+     * @throws \Firebase\JWT\ExpiredException             Provided JWT has since expired, as defined by the 'exp' claim
      */
     public static function findOrAnonymous($token=false)
     {
@@ -76,15 +82,20 @@ class Token extends ActiveRecord
         return false;
     }
 
+    /**
+     * @param $token
+     * @return false|Token
+     *
+     * @throws \UnexpectedValueException     Provided JWT was invalid
+     * @throws \Firebase\JWT\SignatureInvalidException    Provided JWT was invalid because the signature verification failed
+     * @throws \Firebase\JWT\BeforeValidException         Provided JWT is trying to be used before it's eligible as defined by 'nbf'
+     * @throws \Firebase\JWT\BeforeValidException         Provided JWT is trying to be used before it's been created as defined by 'iat'
+     * @throws \Firebase\JWT\ExpiredException             Provided JWT has since expired, as defined by the 'exp' claim
+     */
     public static function tokenForString($token) {
         // If the token matches a JWT format
         if (preg_match('/[^.]+\.[^.]+\.[^.]+/', $token)) {
-            try {
-                $tokenData = CraftQL::getInstance()->jwt->decode($token);
-            }
-            catch (ExpiredException $e) {
-                throw new UserError('The token has expired');
-            }
+            $tokenData = CraftQL::getInstance()->jwt->refreshDecode($token);
             $user = \craft\elements\User::find()->id($tokenData->id)->one();
             $token = Token::forUser($user);
             return $token;
