@@ -54,24 +54,24 @@ class JWTService extends Component {
      */
     function refreshDecode($token) {
         try {
-            $this->decode($token);
+            $tokenData = $this->decode($token);
         } catch(\Firebase\JWT\ExpiredException $e) {
 
             list($header, $payload, $signature) = explode(".", $token);
             $tokenData = JWT::jsonDecode(JWT::urlsafeB64Decode($payload));
 
-            if(!isset($tokenData->refresh_token)){
+            if (!isset($tokenData->refresh_token)) {
                 throw $e;
             }
 
             $refreshToken = $tokenData->refresh_token;
             $user = \craft\elements\User::find()->id($tokenData->id)->one();
-            if($refreshToken != $this->refreshToken($user)){
+            if ($refreshToken != $this->refreshToken($user)) {
                 throw $e;
             }
-
-            return $tokenData;
         }
+
+        return $tokenData;
     }
 
     function tokenForUser(User $user) {
