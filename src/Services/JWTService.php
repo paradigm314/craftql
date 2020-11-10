@@ -59,6 +59,11 @@ class JWTService extends Component {
 
             list($header, $payload, $signature) = explode(".", $token);
             $tokenData = JWT::jsonDecode(JWT::urlsafeB64Decode($payload));
+
+            if(!isset($tokenData->refresh_token)){
+                throw $e;
+            }
+
             $refreshToken = $tokenData->refresh_token;
             $user = \craft\elements\User::find()->id($tokenData->id)->one();
             if($refreshToken != $this->refreshToken($user)){
@@ -85,8 +90,8 @@ class JWTService extends Component {
     }
 
     function refreshToken(User $user) {
-        $lastLogin = $user->lastLoginDate->format(DATE_ATOM);
-        $passwordChanged = $user->lastPasswordChangeDate->format(DATE_ATOM);
+        $lastLogin = ($lastLogin = $user->lastLoginDate) ? $lastLogin->format(DATE_ATOM) : '';
+        $passwordChanged = ($passwordChanged = $user->lastPasswordChangeDate) ? $passwordChanged->format(DATE_ATOM) : '';
         return hash('sha256', "$lastLogin:$passwordChanged");
     }
 
