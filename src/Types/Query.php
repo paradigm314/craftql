@@ -375,10 +375,12 @@ class Query extends Schema {
         $object = $this->createObjectType('ResetPassword')
             ->addBooleanField('success');
 
-        $this->addField('resetPassword')
-            ->type($object)
-            ->addStringArgument('email')
-            ->resolve(function ($root, $args) {
+        $resetPassword = $this->addField('resetPassword')
+            ->type($object);
+
+        $resetPassword->addStringArgument('email');
+
+        $resetPassword->resolve(function ($root, $args) {
                 $email = $args['email'];
 
                 $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($email);
