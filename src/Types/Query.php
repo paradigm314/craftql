@@ -26,6 +26,7 @@ class Query extends Schema {
 
         // @TODO add plugin setting to control authorize visibility
         $this->addAuthSchema();
+        $this->addPasswordResetSchema();
 
         if ($token->can('query:sites')) {
             $this->addSitesSchema();
@@ -358,7 +359,7 @@ class Query extends Schema {
             }
 
             if (!Craft::$app->getUser()->login($user, 0)) {
-                throw new UserError('An unknown error occured');
+                throw new UserError('An unknown error occurred');
             }
 
             $tokenString = CraftQL::getInstance()->jwt->tokenForUser($user);
@@ -368,6 +369,32 @@ class Query extends Schema {
                 'token' => $tokenString,
             ];
         });
+    }
+
+    function addPasswordResetSchema() {
+        $object = $this->createObjectType('ResetPassword')
+            ->addBooleanField('success');
+
+        $this->addField('resetPassword')
+            ->type($object)
+            ->addStringArgument('email')
+            ->resolve(function ($root, $args) {
+                $email = $args['email'];
+
+                $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($email);
+
+                if (!$user) {
+                    throw new UserError('user_not_found');
+                }
+
+                if(!Craft::$app->getUsers()->sendPasswordResetEmail($user)) {
+                    throw new UserError('An unknown error occurred');
+                }
+
+                return [
+                    'success' => true
+                ];
+            });
     }
 
     function addUsersSchema() {
