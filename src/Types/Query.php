@@ -372,11 +372,9 @@ class Query extends Schema {
     }
 
     function addPasswordResetSchema() {
-        $object = $this->createObjectType('ResetPassword')
-            ->addBooleanField('success');
 
         $resetPassword = $this->addField('resetPassword')
-            ->type($object);
+            ->type(PasswordReset::class);
 
         $resetPassword->addStringArgument('email');
 
