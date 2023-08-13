@@ -12,7 +12,6 @@ class ApiController extends Controller
     protected $allowAnonymous = ['index'];
 
     private $graphQl;
-    private $request;
 
     /**
      * @inheritdoc
