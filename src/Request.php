@@ -2,9 +2,15 @@
 
 namespace markhuot\CraftQL;
 
+use markhuot\CraftQL\Models\Token;
+
 class Request {
 
+    /**
+     * @var Token
+     */
     private $token;
+
     private $entryTypes;
     private $volumes;
     private $categoryGroups;
@@ -104,13 +110,26 @@ class Request {
             unset($args['section']);
         }
 
+        /* Only allow users to view their own entires if explicitly defined in $args['type'] */
         if (empty($args['type'])) {
-            $args['typeId'] = array_map(function ($value) {
-                return $value->value;
-            }, $this->entryTypes()->enum()->getValues());
+            $args['typeId'] = [];
+            foreach ($this->entryTypes()->enum()->getValues() as $value) {
+                $typeId = $value->value;
+                if ($this->token->can('query:otheruserentries') || $this->token->can("query:entrytype:{$typeId}:all")) {
+                    $args['typeId'][] = $typeId;
+                }
+            }
         }
         else {
-            $args['typeId'] = $args['type'];
+            $args['typeId'] = [];
+            foreach ($args['type'] as $typeId) {
+                if ($this->token->can('query:otheruserentries') || $this->token->can("query:entrytype:{$typeId}:all")) {
+                    $args['typeId'][] = $typeId;
+                } elseif ($this->token->can("query:entrytype:{$typeId}")) {
+                    $args['authorId'] = $this->token->user->id;
+                    $args['typeId'][] = $typeId;
+                }
+            }
             unset($args['type']);
         }
 
@@ -129,9 +148,6 @@ class Request {
             $criteria->id('and, !='.implode(', !=', $args['idNot']));
             unset($args['idNot']);
         }
-
-        // var_dump($args);
-        // die;
 
         foreach ($args as $key => $value) {
             $criteria = $criteria->{$key}($value);

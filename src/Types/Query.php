@@ -2,8 +2,10 @@
 
 namespace markhuot\CraftQL\Types;
 
-use markhuot\CraftQL\FieldBehaviors\AssetQueryArguments;
 use Craft;
+use GraphQL\Error\UserError;
+use markhuot\CraftQL\CraftQL;
+use markhuot\CraftQL\FieldBehaviors\AssetQueryArguments;
 use markhuot\CraftQL\Builders\Schema;
 use markhuot\CraftQL\FieldBehaviors\EntryQueryArguments;
 use markhuot\CraftQL\FieldBehaviors\UserQueryArguments;
@@ -22,11 +24,15 @@ class Query extends Schema {
         $this->addStringField('ping')
             ->resolve('pong');
 
+        // @TODO add plugin setting to control authorize visibility
+        $this->addAuthSchema();
+        $this->addPasswordResetSchema();
+
         if ($token->can('query:sites')) {
             $this->addSitesSchema();
         }
 
-        if ($token->can('query:entries') && $token->allowsMatch('/^query:entryType/')) {
+        if ($token->canMatch('/^query:entrytype/')) {
             $this->addEntriesSchema();
         }
 
@@ -323,6 +329,70 @@ class Query extends Schema {
                     'totalCount' => $totalCount,
                     'pageInfo' => new PageInfo($offset, $perPage, $totalCount),
                     'edges' => $criteria->all(),
+                ];
+            });
+    }
+
+    function addAuthSchema() {
+        $defaultTokenDuration = CraftQL::getInstance()->getSettings()->userTokenDuration;
+
+        $field = $this->addField('authorize');
+        $field->type(Authorize::class);
+        $field->addStringArgument('username')->nonNull();
+        $field->addStringArgument('password')->nonNull();
+        $field->resolve(function ($root, $args) use ($defaultTokenDuration) {
+            $loginName = $args['username'];
+            $password = $args['password'];
+
+            // Does a user exist with that username/email?
+            $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($loginName);
+
+            if (!$user || $user->password === null) {
+                // Delay to match $user->authenticate()'s delay
+                Craft::$app->getSecurity()->validatePassword('p@ss1w0rd', '$2y$13$nj9aiBeb7RfEfYP3Cum6Revyu14QelGGxwcnFUKXIrQUitSodEPRi');
+                throw new UserError('invalid_credentials');
+            }
+
+            // Did they submit a valid password, and is the user capable of being logged-in?
+            if (!$user->authenticate($password)) {
+                throw new UserError($user->authError);
+            }
+
+            if (!Craft::$app->getUser()->login($user, 0)) {
+                throw new UserError('An unknown error occurred');
+            }
+
+            $tokenString = CraftQL::getInstance()->jwt->tokenForUser($user);
+
+            return  [
+                'user' => $user,
+                'token' => $tokenString,
+            ];
+        });
+    }
+
+    function addPasswordResetSchema() {
+
+        $resetPassword = $this->addField('resetPassword')
+            ->type(PasswordReset::class);
+
+        $resetPassword->addStringArgument('email');
+
+        $resetPassword->resolve(function ($root, $args) {
+                $email = $args['email'];
+
+                $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($email);
+
+                if (!$user) {
+                    throw new UserError('user_not_found');
+                }
+
+                if(!Craft::$app->getUsers()->sendPasswordResetEmail($user)) {
+                    throw new UserError('An unknown error occurred');
+                }
+
+                return [
+                    'success' => true
                 ];
             });
     }

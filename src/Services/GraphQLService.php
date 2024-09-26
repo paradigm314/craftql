@@ -4,7 +4,8 @@ namespace markhuot\CraftQL\Services;
 
 use Craft;
 use GraphQL\GraphQL;
-use GraphQL\Error\Debug;
+use GraphQL\Error\DebugFlag;
+use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema;
 use GraphQL\Validator\DocumentValidator;
 use GraphQL\Validator\Rules\QueryComplexity;
@@ -115,8 +116,11 @@ class GraphQLService extends Component {
             \markhuot\CraftQL\Directives\Date::directive(),
         ]);
 
+        /** @var ObjectType $mutation */
         $mutation = (new \markhuot\CraftQL\Types\Mutation($request))->getRawGraphQLObject();
-        $schemaConfig['mutation'] = $mutation;
+        if (!empty($mutation->getFields())) {
+            $schemaConfig['mutation'] = $mutation;
+        }
 
         $schema = new Schema($schemaConfig);
 
@@ -128,7 +132,7 @@ class GraphQLService extends Component {
     }
 
     function execute($schema, $input, $variables = []) {
-        $debug = Craft::$app->config->getGeneral()->devMode ? Debug::INCLUDE_DEBUG_MESSAGE | Debug::RETHROW_INTERNAL_EXCEPTIONS : null;
+        $debug = Craft::$app->config->getGeneral()->devMode ? DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::RETHROW_INTERNAL_EXCEPTIONS : 0;
         return GraphQL::executeQuery($schema, $input, null, null, $variables)->toArray($debug);
     }
 

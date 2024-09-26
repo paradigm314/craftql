@@ -9,9 +9,10 @@
         "craft-plugin"
     ],
     "require": {
-        "craftcms/cms": "^3.2.0",
-        "webonyx/graphql-php": "^0.12.0",
-        "react/http": "^0.7"
+        "craftcms/cms": "^3.6.0",
+        "webonyx/graphql-php": "^14.4.1",
+        "react/http": "^0.7",
+        "firebase/php-jwt": "^5.0.0"
     },
     "authors": [
         {
@@ -29,6 +30,19 @@
         "handle": "craftql",
         "developer": "Mark Huot",
         "developerUrl": "https://www.github.com/markhuot",
-        "class": "markhuot\\CraftQL\\CraftQL"
+        "class": "markhuot\\CraftQL\\CraftQL",
+        "components": {
+            "graphQl": "markhuot\\CraftQL\\Services\\GraphQLService",
+            "jwt": "markhuot\\CraftQL\\Services\\JWTService"
+        }
+    },
+    "require-dev": {
+        "overtrue/phplint": "^2.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true,
+            "craftcms/plugin-installer": true
+        }
     }
 }

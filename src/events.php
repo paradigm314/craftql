@@ -96,4 +96,9 @@ return [
             new \markhuot\CraftQL\Listeners\GetDefaultFieldSchema,
         ],
     ],
+    \craft\services\UserPermissions::class => [
+        \craft\services\UserPermissions::EVENT_REGISTER_PERMISSIONS => [
+            new \markhuot\CraftQL\Listeners\GetUserPermissions,
+        ]
+    ]
 ];

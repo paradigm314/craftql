@@ -12,6 +12,8 @@ class Settings extends Model
     public $allowedOrigins = [];
     public $allowedHeaders = ['Authorization, Content-Type'];
     public $headers = [];
+    public $securityKey = false;
+    public $userTokenDuration = 60 * 60 * 4 /* 4 hours */;
     public $maxQueryDepth = false;
     public $maxQueryComplexity = false;
     public $throwSchemaBuildErrors = false;

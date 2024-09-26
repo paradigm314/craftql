@@ -20,6 +20,11 @@ class User extends Schema {
         $this->addBooleanField('admin')->nonNull();
         $this->addBooleanField('isCurrent')->nonNull();
         $this->addStringField('preferredLocale');
+        $this->addStringField('token')
+            ->description('The active JWT token for the user. Only avalible for new users.')
+            ->resolve(function($root, $args, $context, $info) {
+                return $root->token ?? null;
+            });
         // $this->addField('status')->type(UsersField::statusEnum())->nonNull();
 
         $volumeId = Craft::$app->getSystemSettings()->getSetting('users', 'photoVolumeId');

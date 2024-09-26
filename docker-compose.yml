@@ -1,0 +1,14 @@
+version: '2'
+
+services:
+
+  app:
+    build: .
+    container_name: craftql-composer
+    volumes:
+      - ./composer.json:/composer.json
+      - ./composer.lock:/composer.lock
+
+    environment:
+      # Set locale to UTF-8 (https://oncletom.io/2015/docker-encoding/)
+      LANG: C.UTF-8

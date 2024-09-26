@@ -12,17 +12,6 @@ class ApiController extends Controller
     protected $allowAnonymous = ['index'];
 
     private $graphQl;
-    private $request;
-
-    function __construct(
-        $id,
-        $module,
-        \markhuot\CraftQL\Services\GraphQLService $graphQl,
-        $config = []
-    ) {
-        parent::__construct($id, $module, $config);
-        $this->graphQl = $graphQl;
-    }
 
     /**
      * @inheritdoc
@@ -49,16 +38,27 @@ class ApiController extends Controller
 
     function actionIndex()
     {
-        $token = false;
+        $response = \Craft::$app->getResponse();
         $result = false;
 
         $authorization = Craft::$app->request->headers->get('authorization');
         preg_match('/^(?:b|B)earer\s+(?<tokenId>.+)/', $authorization, $matches);
-        $token = Token::findId(@$matches['tokenId']);
+        try {
+            $token = Token::findOrAnonymous(@$matches['tokenId']);
+        } catch ( \UnexpectedValueException
+                | \Firebase\JWT\SignatureInvalidException
+                | \Firebase\JWT\BeforeValidException
+                | \Firebase\JWT\ExpiredException $e) {
+            $response->setStatusCode(401);
+            $response->headers->add('Content-Type', 'application/json; charset=UTF-8');
+            return $this->asErrorJson($e->getMessage());
+        }
 
-        // @todo, check user permissions when PRO license
 
-        $response = \Craft::$app->getResponse();
+        if ($user = $token->getUser()) {
+            $response->headers->add('Authorization', 'Bearer ' . CraftQL::getInstance()->jwt->tokenForUser($user));
+        }
+
         if ($allowedOrigins = CraftQL::getInstance()->getSettings()->allowedOrigins) {
             if (is_string($allowedOrigins)) {
                 $allowedOrigins = [$allowedOrigins];
@@ -67,22 +67,17 @@ class ApiController extends Controller
             if (in_array($origin, $allowedOrigins) || in_array('*', $allowedOrigins)) {
                 $response->headers->set('Access-Control-Allow-Origin', $origin);
             }
-            $response->headers->set('Access-Control-Allow-Credentials', 'true');
+
+            $response->headers->add('Access-Control-Allow-Credentials', 'true');
+            $response->headers->add('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+            $response->headers->add('Access-Control-Expose-Headers', 'Authorization');
             $response->headers->set('Access-Control-Allow-Headers', implode(', ', CraftQL::getInstance()->getSettings()->allowedHeaders));
         }
+
         $response->headers->set('Allow', implode(', ', CraftQL::getInstance()->getSettings()->verbs));
 
         if (\Craft::$app->getRequest()->isOptions) {
             return '';
-        }
-
-        if (!$token) {
-            http_response_code(403);
-            return $this->asJson([
-                'errors' => [
-                    ['message' => 'Not authorized']
-                ]
-            ]);
         }
 
         Craft::debug('CraftQL: Parsing request');
@@ -114,7 +109,7 @@ class ApiController extends Controller
         $useCache = key_exists('useCache', $config) && $config['useCache'] === true;
 
         if ($useCache) {
-            Craft::trace('CraftQL: Checking cache');
+            Craft::debug('CraftQL: Checking cache');
             $cache    = Craft::$app->getCache();
             $cacheKey = $cache->buildKey([$input, $variables]);
 
@@ -124,29 +119,27 @@ class ApiController extends Controller
         }
 
         if(!$result) {
-            Craft::trace('CraftQL: Parsing request complete');
+            Craft::debug('CraftQL: Parsing request complete');
 
-            Craft::trace('CraftQL: Bootstrapping');
-            $this->graphQl->bootstrap();
-            Craft::trace('CraftQL: Bootstrapping complete');
+            Craft::debug('CraftQL: Bootstrapping');
+            CraftQL::getInstance()->graphQl->bootstrap();
+            Craft::debug('CraftQL: Bootstrapping complete');
 
-            Craft::trace('CraftQL: Fetching schema');
-            $schema = $this->graphQl->getSchema($token);
-            Craft::trace('CraftQL: Schema built');
+            Craft::debug('CraftQL: Fetching schema');
+            $schema = CraftQL::getInstance()->graphQl->getSchema($token);
+            Craft::debug('CraftQL: Schema built');
 
-            Craft::trace('CraftQL: Executing query');
+            Craft::debug('CraftQL: Executing query');
 
-            $config   = Craft::$app->getConfig()->getConfigFromFile('craftql');
-
-            $result = $this->graphQl->execute($schema, $input, $variables);
+            $result = CraftQL::getInstance()->graphQl->execute($schema, $input, $variables);
 
             if($useCache) {
-                Craft::trace('CraftQL: Updating cache');
+                Craft::debug('CraftQL: Updating cache');
                 $cache->set($cacheKey, $result);
             }
         }
 
-        Craft::trace('CraftQL: Execution complete');
+        Craft::debug('CraftQL: Execution complete');
 
         $customHeaders = CraftQL::getInstance()->getSettings()->headers ?: [];
         foreach ($customHeaders as $key => $value) {

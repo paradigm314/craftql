@@ -3,6 +3,7 @@
 namespace markhuot\CraftQL\Types;
 
 use craft\base\Element;
+use craft\elements\Asset;
 use GraphQL\Error\UserError;
 use Craft;
 use markhuot\CraftQL\Builders\Schema;
@@ -12,9 +13,12 @@ class Mutation extends Schema {
 
     function boot() {
 
-        $this->addField('helloWorld')
-            ->description('A sample mutation. Doesn\'t actually save anything.')
-            ->resolve('If this were a real mutation it would have saved to the database.');
+        if ($this->request->entryTypes()->all('mutate') ||
+           ($this->getRequest()->token()->can('mutate:globals') && $this->request->globals()->count())) {
+            $this->addField('helloWorld')
+                ->description('A sample mutation. Doesn\'t actually save anything.')
+                ->resolve('If this were a real mutation it would have saved to the database.');
+        }
 
         foreach ($this->request->entryTypes()->all('mutate') as $entryType) {
             $this->addField('upsert'.$entryType->getName())
@@ -47,106 +51,177 @@ class Mutation extends Schema {
             }
         }
 
-        if ($this->request->token()->can('mutate:users')) {
+        if ($this->request->token()->canMatch('/^mutate:users/')) {
             $updateUser = $this->addField('upsertUser')
-                ->type(User::class)
-                ->resolve(function ($root, $args, $context, $info) {
-                    $values = $args;
-
-                    if (!empty($args['id'])) {
-                        $userId = @$args['id'];
-                        unset($values['id']);
-
-                        $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
-                        if (!$user) {
-                            throw new UserError('Could not find user '.$userId);
-                        }
-                    }
-                    else {
-                        $user = new \craft\elements\User;
-                    }
-
-                    foreach (['firstName', 'lastName', 'username', 'email'] as $fieldName) {
-                        if (isset($values[$fieldName])) {
-                            $user->{$fieldName} = $values[$fieldName];
-                            unset($values[$fieldName]);
-                        }
-                    }
-
-                    $permissions = [];
-                    if (!empty($values['permissions'])) {
-                        $permissions = $values['permissions'];
-                        unset($values['permissions']);
-                    }
-
-                    if (!empty($values)) {
-                        $user->setFieldValues($values);
-                    }
-
-                    $user->setScenario(Element::SCENARIO_LIVE);
-
-                    if (!Craft::$app->elements->saveElement($user)) {
-                        if (!empty($user->getErrors())) {
-                            foreach ($user->getErrors() as $key => $errors) {
-                                foreach ($errors as $error) {
-                                    throw new UserError($error);
-                                }
-                            }
-                        }
-                    }
-
-                    if (!empty($permissions)) {
-                        Craft::$app->getUserPermissions()->saveUserPermissions($user->id, $permissions);
-                    }
-
-                    return $user;
-                });
+                ->type(User::class);
 
             $updateUser->addIntArgument('id');
             $updateUser->addStringArgument('firstName');
             $updateUser->addStringArgument('lastName');
             $updateUser->addStringArgument('username');
             $updateUser->addStringArgument('email');
+            $updateUser->addStringArgument('password');
+            $updateUser->addStringArgument('photo');
 
-            if ($this->request->token()->can('mutate:userPermissions')) {
+            if ($this->request->token()->can('mutate:users:permissions')) {
                 $updateUser->addStringArgument('permissions')->lists();
             }
 
             $fieldLayout = Craft::$app->getFields()->getLayoutByType(\craft\elements\User::class);
             $updateUser->addArgumentsByLayoutId($fieldLayout->id);
+
+            $updateUser->resolve(function ($root, $args, $context, $info) use ($updateUser) {
+
+                $values = $args;
+                $token = $this->request->token();
+                $new = empty($args['id']);
+
+                if (!$new) {
+                    $userId = @$args['id'];
+                    unset($values['id']);
+
+                    if($token->canNot('mutate:users:all') && $token->canNot('mutate:users:self')) {
+                        throw new UserError('unauthorized');
+                    }
+
+                    $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
+                    if (!$user) {
+                        throw new UserError('Could not find user '.$userId);
+                    }
+
+                    if($token->canNot('mutate:users:all') && $user->id != $token->getUser()->id) {
+                        throw new UserError('unauthorized');
+                    }
+                }
+                else {
+                    $user = new \craft\elements\User;
+                }
+
+                foreach (['firstName', 'lastName', 'username', 'email'] as $fieldName) {
+                    if (isset($values[$fieldName])) {
+                        $user->{$fieldName} = $values[$fieldName];
+                        unset($values[$fieldName]);
+                    }
+                }
+
+                if(isset($values['password'])) {
+                    $user->newPassword = $values['password'];
+                    unset($values['password']);
+                }
+
+                $permissions = [];
+                if (!empty($values['permissions'])) {
+                    $permissions = $values['permissions'];
+                    unset($values['permissions']);
+                }
+
+                if(array_key_exists('photo', $values) && $values['photo'] === null) {
+                    if(isset($user->photoId)) {
+                        Craft::$app->users->deleteUserPhoto($user);
+                    }
+                    unset($values['photo']);
+                }
+
+                if(!empty($values['photo'])) {
+                    $data = $values['photo'];
+
+                    if (preg_match('/^data:image\/(\w+);base64,/', $data, $type)) {
+                        $data = substr($data, strpos($data, ',') + 1);
+                        $type = strtolower($type[1]); // jpg, png, gif
+
+                        if (!in_array($type, [ 'jpg', 'jpeg', 'gif', 'png' ])) {
+                            throw new \Exception('invalid image type');
+                        }
+
+                        $photo = base64_decode($data);
+
+                        if ($photo === false) {
+                            throw new \Exception('base64_decode failed');
+                        }
+                    } else {
+                        throw new \Exception('did not match data URI with image data');
+                    }
+
+                    $uploadPath = \craft\helpers\Assets::tempFilePath($type);
+                    file_put_contents($uploadPath, $photo);
+
+                    $uuid = craft\helpers\StringHelper::UUID();
+
+                    $filename = "user_{$uuid}_photo.{$type}";
+
+                    Craft::$app->users->saveUserPhoto($uploadPath, $user, $filename);
+
+                    unset($values['photo']);
+                }
+
+                foreach ($values as $handle => &$value) {
+                    $callback = $updateUser->getArgument($handle)->getOnSave();
+                    if ($callback) {
+                        $value = $callback($value);
+                    }
+                }
+
+                if (!empty($values)) {
+                    $user->setFieldValues($values);
+                }
+
+                $user->setScenario(Element::SCENARIO_LIVE);
+
+                if (!Craft::$app->elements->saveElement($user)) {
+                    if (!empty($user->getErrors())) {
+                        foreach ($user->getErrors() as $key => $errors) {
+                            foreach ($errors as $error) {
+                                throw new UserError($error);
+                            }
+                        }
+                    }
+                }
+
+                if($new) {
+                    Craft::$app->users->assignUserToDefaultGroup($user);
+                }
+
+                if (!empty($permissions)) {
+                    Craft::$app->getUserPermissions()->saveUserPermissions($user->id, $permissions);
+                }
+
+                return $user;
+            });
         }
 
-        // $fields['upsertField'] = [
-        //     'type' => \markhuot\CraftQL\Types\Entry::interface($request),
-        //     'args' => [
-        //         'id' => Type::nonNull(Type::int()),
-        //         'json' => Type::nonNull(Type::string()),
-        //     ],
-        //     'resolve' => function ($root, $args) {
-        //         $entry = \craft\elements\Entry::find();
-        //         $entry->id($args['id']);
-        //         $entry = $entry->one();
+        if ($this->request->token()->canMatch('/^mutate:users/')) {
+            $deleteUser = $this->addField('deleteUser')
+                ->type(User::class);
 
-        //         $json = json_decode($args['json'], true);
-        //         $fieldData = [];
-        //         foreach ($json as $fieldName => $value) {
-        //             if (in_array($fieldName, ['title'])) {
-        //                 $entry->{$fieldName} = $value;
-        //             }
-        //             else {
-        //                 $fieldData[$fieldName] = $value;
-        //             }
-        //         }
+            $deleteUser->addIntArgument('id')->nonNull();
 
-        //         if (!empty($fieldData)) {
-        //             $entry->setFieldValues($fieldData);
-        //         }
+            $deleteUser->resolve(function ($root, $args, $context, $info) use ($deleteUser) {
 
-        //         Craft::$app->elements->saveElement($entry);
+                $token = $this->request->token();
+                $userId = $args['id'];
 
-        //         return $entry;
-        //     },
-        // ];
+                if($token->canNot('mutate:users:all') && $token->canNot('mutate:users:self')) {
+                    throw new UserError('unauthorized');
+                }
+
+                $user = \craft\elements\User::find()->id($userId)->anyStatus()->one();
+                if (!$user) {
+                    throw new UserError('Could not find user '.$userId);
+                }
+
+                if($token->canNot('mutate:users:all') && $user->id != $token->getUser()->id) {
+                    throw new UserError('unauthorized');
+                }
+
+                $user->setScenario(Element::SCENARIO_LIVE);
+
+                if (!Craft::$app->elements->deleteElement($user)) {
+                    throw new UserError('delete.failed');
+                }
+
+                return $user;
+            });
+        }
     }
 
 }
